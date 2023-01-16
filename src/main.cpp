@@ -11,7 +11,7 @@
 using namespace cv;
 
 int main(int argc, char** argv) {
-    Mat image = imread(argv[1], CV_LOAD_IMAGE_GRAYSCALE);
+    Mat image = imread(argv[1], IMREAD_GRAYSCALE);
     int block_size = 64;
 
     /*resize to divide into 64x64 blocks*/
@@ -86,6 +86,6 @@ int main(int argc, char** argv) {
     std::cout << "map size: " << map.rows << " " << map.cols << std::endl;
 
     std::vector<int> compression_params;
-    compression_params.push_back(CV_IMWRITE_PXM_BINARY);
+    compression_params.push_back(IMWRITE_PXM_BINARY);
     imwrite(argv[2], result, compression_params);
 }
