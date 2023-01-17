@@ -8,7 +8,9 @@
 
 ### Использование
 
-`./bitcrasher input.pgm output.pbm`
+```shell
+./bitcrasher input.pgm output.pbm
+```
 
 Для тестирования можно запустить `./test_bitcrasher.sh`, но перед этим нужно создать директорию _test_bitcrasher_ в директории _images_, т.к. пустые директории **Github** не хранит.
 
@@ -30,9 +32,7 @@
 
 В левом верхнем углу оригинальное изображение, далее по часовой стрелке: djvulibre, bitcrasher, simpledjvu.
 
-<p align="center">
-  <img src="https://github.com/Tehada/Bitcrasher/blob/master/images/example.jpg"/>
-</p>
+![example](https://raw.githubusercontent.com/ImageProcessing-ElectronicPublications/bitcrasher-samples/main/images/example.jpg)
 
 В [image][first] собраны все тестовые результаты. Директория [original][second] содержит исходные изображения в формате pgm. В директории [djvulibre][third] результат работы утилиты [cpaldjvu][fourth] в формате pbm. В том же формате хранятся результаты работы simpledjvu и bitcrasher в [simpledjvu][fifth] и [bitcrasher][sixth]. В [compare][seventh] содержатся склеенные изображения пониженного качества, но небольшого размера.
 
