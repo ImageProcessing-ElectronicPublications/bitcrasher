@@ -8,62 +8,85 @@
 
 using namespace cv;
 
-Mat DCT_function(int p, int q, int size)
+Mat zigzag(int size)
 {
-    const double pi = std::acos(-1);
-    double alpha_p, alpha_q;
-    int m, n;
-    Mat result = Mat::zeros(size, size, CV_64F);
+    int num_dia, number, k;
+    //double number_previous_elements, number;
+    int x, y;
+    Mat result = Mat::zeros(size, size, CV_32S);
 
-    for (m = 0; m != size; ++m)
+    for (k = 0; k < size; k++)
     {
-        for (n = 0; n != size; ++n)
+        number = k * (k + 1) / 2;
+        if (k % 2 == 0)
         {
-            result.at<double>(m, n) =
-                std::cos(pi * (2 * m + 1) * p / (2 * (double)size)) *
-                std::cos(pi * (2 * n + 1) * q / (2 * (double)size));
+            for (y = 0; y < k + 1; y++)
+            {
+                x = k - y;
+                result.at<int>(x, y) = number;
+                number++;
+            }
+        }
+        else
+        {
+            for (x = 0; x < k + 1; x++)
+            {
+                y = k - x;
+                result.at<int>(x, y) = number;
+                number++;
+            }
         }
     }
 
-    p == 0 ? alpha_p = std::sqrt(1 / (double)size) : alpha_p = std::sqrt(2 / (double)size);
-    q == 0 ? alpha_q = std::sqrt(1 / (double)size) : alpha_q = std::sqrt(2 / (double)size);
+    for (k = size; k < 2 * size - 1; k++)
+    {
+        num_dia = 2 * size - k - 1;
+        if (k % 2 == 1)
+        {
+            for (y = size - 1; y > size - num_dia - 1; y--)
+            {
+                x = k - y;
+                result.at<int>(x, y) = number;
+                number++;
+            }
+        }
+        else
+        {
+            for (x = size - 1; x > size - num_dia - 1; x--)
+            {
+                y = k - x;
+                result.at<int>(x, y) = number;
+                number++;
+            }
+        }
+    }
 
-    result *= alpha_q * alpha_p;
     return result;
 }
 
-/* Calculates upper triangular matrix S, where A is a symmetrical matrix A=S'*S */
-void Cholesky(Mat& A, Mat& S)   // change to return Mat!
+Mat DCT_function(int p, int q, int size)
 {
-    int dim = A.rows;
-    S.create(dim, dim, CV_64F);
+    const double pi = std::acos(-1);
+    double alpha_p, alpha_q, fs;
+    int m, n;
+    Mat result = Mat::zeros(size, size, CV_64F);
 
-    int i, j, k;
-
-    for( i = 0; i < dim; i++ )
+    fs = 0.5 /(double)size;
+    for (m = 0; m < size; m++)
     {
-        for( j = 0; j < i; j++ )
-            S.at<double>(i,j) = 0.;
-
-        double sum = 0.;
-        for( k = 0; k < i; k++ )
+        for (n = 0; n < size; n++)
         {
-            double val = S.at<double>(k,i);
-            sum += val*val;
-        }
-
-        S.at<double>(i,i) = std::sqrt(std::max(A.at<double>(i,i) - sum, 0.));
-        double ival = 1./S.at<double>(i, i);
-
-        for( j = i + 1; j < dim; j++ )
-        {
-            sum = 0;
-            for( k = 0; k < i; k++ )
-                sum += S.at<double>(k, i) * S.at<double>(k, j);
-
-            S.at<double>(i, j) = (A.at<double>(i, j) - sum)*ival;
+            result.at<double>(m, n) =
+                std::cos(pi * (2 * m + 1) * p * fs) *
+                std::cos(pi * (2 * n + 1) * q * fs);
         }
     }
+
+    alpha_p = (p == 0) ? std::sqrt(2.0 * fs) : std::sqrt(4.0 * fs);
+    alpha_q = (q == 0) ? std::sqrt(2.0 * fs) : std::sqrt(4.0 * fs);
+
+    result *= (alpha_q * alpha_p);
+    return result;
 }
 
 /*converts each block into column*/
@@ -110,62 +133,38 @@ Mat col2im(Mat &input, int block_size, int height, int width)
     return result;
 }
 
-Mat order_basis_functions(int size)
+/* Calculates upper triangular matrix S, where A is a symmetrical matrix A=S'*S */
+void Cholesky(Mat& A, Mat& S)   // change to return Mat!
 {
-    int num_dia, number, k;
-    //double number_previous_elements, number;
-    int x, y;
-    Mat result = Mat::zeros(size, size, CV_32S);
+    int dim = A.rows;
+    S.create(dim, dim, CV_64F);
 
-    for (k = 1; k != size + 1; ++k)
+    int i, j, k;
+
+    for( i = 0; i < dim; i++ )
     {
-        //number_previous_elements = (k - 1) * k / 2.0;
-        number = (k - 1) * k / 2 + 1;
-        if (k % 2 == 0)
+        for( j = 0; j < i; j++ )
+            S.at<double>(i,j) = 0.;
+
+        double sum = 0.;
+        for( k = 0; k < i; k++ )
         {
-            for (x = 0; x != k; ++x)
-            {
-                y = k - x - 1;
-                result.at<int>(x, y) = number;
-                ++number;
-            }
+            double val = S.at<double>(k,i);
+            sum += val*val;
         }
-        else
+
+        S.at<double>(i,i) = std::sqrt(std::max(A.at<double>(i,i) - sum, 0.));
+        double ival = 1./S.at<double>(i, i);
+
+        for( j = i + 1; j < dim; j++ )
         {
-            for (y = 0; y != k; ++y)
-            {
-                x = k - y - 1;
-                result.at<int>(x, y) = number;
-                ++number;
-            }
+            sum = 0;
+            for( k = 0; k < i; k++ )
+                sum += S.at<double>(k, i) * S.at<double>(k, j);
+
+            S.at<double>(i, j) = (A.at<double>(i, j) - sum)*ival;
         }
     }
-
-    for (k = size + 1; k != 2 * size; ++k)
-    {
-        num_dia = 2 * size + 1 - k;
-        //number_previous_elements = std::pow(size, 2) - (2 * size - k + 2) * (2 * size - k + 1) / 2.0;
-        //number = number_previous_elements + 1;
-        if (k % 2 == 1)
-        {
-            for (x = size - 1; x != size - num_dia; --x)
-            {
-                y = k - x - 1;
-                result.at<int>(x, y) = number;
-                ++number;
-            }
-        }
-        else
-        {
-            for (y = size - 1; y != size - num_dia; --y)
-            {
-                x = k - y - 1;
-                result.at<int>(x, y) = number;
-                ++number;
-            }
-        }
-    }
-    return result;
 }
 
 Mat take_max(Mat a, double b)
@@ -173,9 +172,9 @@ Mat take_max(Mat a, double b)
     return max(0, a - b) - max(0, -a - b);
 }
 
-void ADMM(Mat A, Mat &x, Mat b, double lagrangian_param, double relaxation_param, Block_data &data, int i, int total_blocks)
+void ADMM(Mat A, Mat &x, Mat b, Mat R, double lagrangian_param, double relaxation_param, Block_data &data, int i, int total_blocks)
 {
-    Mat D, R, w, Rtr;
+    Mat D, w, Rtr, AX;
     Mat Atr = Mat::zeros(A.cols, A.rows, CV_64F);
     double ABSTOL, RELTOL;
     int m, n;
@@ -198,40 +197,36 @@ void ADMM(Mat A, Mat &x, Mat b, double lagrangian_param, double relaxation_param
     Mat z = Mat::zeros(m, 1, CV_64F); //64??? check shape on reflect!!
     Mat u = Mat::zeros(m, 1, CV_64F);
 
-    //if (not QUIET) {
-    //    std::printf("%3s\t%10s\t%10s\t%10s\t%10s\t%10s\n", "iter",
-    //      "r norm", "eps pri", "s norm", "eps dual", "objective") ;
-    //}
     transpose(A, Atr);
-    Mat temp = Atr * A;
-    Cholesky(temp, R);
     transpose(R, Rtr);
-    for (int k = 0; k != iters; ++k)
+    for (int k = 0; k < iters; k++)
     {
 
         solve(Rtr, Atr * (b + z - u), x1);
         solve(R, x1, x);
 
         w = z;
-        D = relaxation_param * A * x + (1 - relaxation_param) * (w + b);
+        AX = A * x;
+        D = relaxation_param * AX + (1. - relaxation_param) * (w + b);
         z = take_max(D - b + u, 1. / lagrangian_param);
         u = u + (D - z - b);
 
         data.value[k] = norm(z, NORM_L1, noArray());
-        data.primal_rest_norm[k] = norm(A * x - z - b, NORM_L2, noArray());
+        data.primal_rest_norm[k] = norm(AX - z - b, NORM_L2, noArray());
 
         data.dual_rest_norm[k] = norm(-lagrangian_param * Atr * (z - w), NORM_L2, noArray());
-        data.tolerance_primal[k] = std::sqrt(m) * ABSTOL + RELTOL * std::max(norm(A * x, NORM_L2, noArray()),
+        data.tolerance_primal[k] = std::sqrt(m) * ABSTOL + RELTOL * std::max(norm(AX, NORM_L2, noArray()),
                                    std::max(norm(-z, NORM_L2, noArray()),
                                             norm(b, NORM_L2, noArray())));
         data.tolerance_dual[k] = std::sqrt(n) * ABSTOL + RELTOL * norm(lagrangian_param * Atr * u, NORM_L2, noArray());
-        std::cout << "block " << i << "/" << total_blocks << "\t"
-                  //<< "iter " << k << "/" << iters << "\t"
-                  << data.primal_rest_norm[k] << "\t"
-                  << data.tolerance_primal[k] << "\t"
-                  << data.dual_rest_norm[k] << "\t"
-                  << data.tolerance_dual[k] << "\t"
-                  << data.value[k] << std::endl;
+        if (((k + 1) % 100) == 0)
+            std::cout << "block " << i << "/" << total_blocks << "\t"
+                      //<< "iter " << k << "/" << iters << "\t"
+                      << data.primal_rest_norm[k] << "\t"
+                      << data.tolerance_primal[k] << "\t"
+                      << data.dual_rest_norm[k] << "\t"
+                      << data.tolerance_dual[k] << "\t"
+                      << data.value[k] << std::endl;
 
         if (data.primal_rest_norm[k] < data.tolerance_primal[k] &&
                 data.dual_rest_norm[k] < data.tolerance_dual[k])
